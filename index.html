@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>REY SHADOW V3</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- RESET & CORE --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            user-select: none; /* Mencegah seleksi teks */
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #050508;
+            color: #fff;
+            overflow: hidden; /* MEMATIKAN SCROLL */
+            position: fixed; /* MENGUNCI LAYAR */
+        }
+
+        /* --- BACKGROUND VIDEO & OVERLAY --- */
+        .bg-video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+        }
+
+        .bg-video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+        }
+
+        .bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(10,10,15,0.8), rgba(10,10,15,0.95) 60%, #050508);
+            z-index: -1;
+            backdrop-filter: blur(5px);
+        }
+
+        /* --- APP CONTAINER --- */
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* --- HEADER --- */
+        .header {
+            padding: 20px 20px 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        .brand {
+            font-weight: 800;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #fff, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+        }
+
+        /* --- PAGES (SPA LOGIC) --- */
+        .page {
+            flex: 1;
+            overflow-y: auto; /* Internal scroll jika konten panjang, tapi hidden scrollbar */
+            padding: 10px 20px 100px 20px;
+            display: none; /* Hidden by default */
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .page.active {
+            display: block;
+            opacity: 1;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .page::-webkit-scrollbar {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- UI COMPONENTS --- */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: #a855f7;
+            opacity: 0.7;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #fff;
+            border-left: 3px solid #d946ef;
+            padding-left: 10px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- HOME PAGE --- */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .avatar {
+            width: 50px;
+            height: 50px;
+            background: #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #a855f7;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+            overflow: hidden; /* Ensure image stays inside circle */
+        }
+        /* Tambahan agar gambar pas di dalam lingkaran */
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-info h3 { font-size: 1rem; }
+        .user-info p { font-size: 0.75rem; color: #d946ef; font-weight: bold; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-val { font-size: 1.2rem; font-weight: bold; }
+        .stat-label { font-size: 0.7rem; color: #aaa; }
+
+        .news-banner {
+            width: 100%;
+            height: 160px;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+        .news-banner video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .news-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(to top, #000, transparent);
+        }
+
+        /* --- TOOLS PAGE --- */
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: #ccc;
+            margin-bottom: 8px;
+        }
+        .custom-input {
+            width: 100%;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #333;
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        .custom-input:focus {
+            border-color: #a855f7;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+        }
+
+        .exploit-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .exploit-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #333;
+            color: #aaa;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            text-align: center;
+        }
+
+        .exploit-btn.selected {
+            background: rgba(168, 85, 247, 0.2);
+            border-color: #a855f7;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.3) inset;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 18px;
+            background: transparent;
+            border: 1px solid #facc15; /* Kuning sesuai request */
+            color: #facc15;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 8px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.2);
+            transition: 0.2s;
+        }
+        
+        .action-btn:active {
+            background: rgba(250, 204, 21, 0.1);
+            transform: scale(0.98);
+        }
+
+        .tool-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .tool-item {
+            display: flex;
+            align-items: center;
+            background: rgba(10,10,15,0.8);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .tool-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: #a855f7;
+        }
+        .tool-info h4 { font-size: 0.95rem; }
+        .tool-info p { font-size: 0.75rem; color: #777; }
+        .badge {
+            margin-left: auto;
+            font-size: 0.65rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        /* --- PROFILE PAGE --- */
+        .profile-big {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .avatar-lg {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 15px;
+            border-radius: 50%;
+            background: #222;
+            border: 3px solid #a855f7;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            overflow: hidden; /* Ensure image stays inside circle */
+        }
+        /* Tambahan agar gambar pas di dalam lingkaran besar */
+        .avatar-lg img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .edit-badge {
+            position: absolute;
+            bottom: 0; right: 0;
+            background: #a855f7;
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+        .editable-name {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #555;
+            color: white;
+            text-align: center;
+            font-size: 1.5rem;
+            width: 60%;
+            margin-bottom: 5px;
+        }
+
+        /* --- BOTTOM NAVIGATION --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: rgba(5, 5, 8, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            z-index: 100;
+            padding-bottom: 10px; /* Safe area for iPhone home bar */
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 0.7rem;
+            gap: 5px;
+            padding: 10px;
+            transition: 0.3s;
+        }
+
+        .nav-item i {
+            font-size: 1.2rem;
+            transition: 0.3s;
+        }
+
+        .nav-item.active {
+            color: #a855f7;
+        }
+        
+        .nav-item.active i {
+            transform: translateY(-2px);
+            text-shadow: 0 0 10px #a855f7;
+        }
+
+        /* --- MODALS & LOADING --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s;
+        }
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            text-align: center;
+            width: 80%;
+        }
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(168, 85, 247, 0.3);
+            border-top: 3px solid #a855f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        .console-text {
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            font-size: 0.8rem;
+            text-align: left;
+            height: 100px;
+            overflow: hidden;
+            background: #111;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-video-container">
+        <video id="mainVideo" autoplay muted loop playsinline>
+            <source src="https://files.catbox.moe/ua0mbn.mp4" type="video/mp4">
+        </video>
+        <div class="bg-overlay"></div>
+    </div>
+
+    <div id="app">
+        
+        <div class="header">
+            <div class="brand">REY SHADOW V3</div>
+            <i class="fa-solid fa-bars" style="color: #fff; font-size: 1.2rem;"></i>
+        </div>
+
+        <div id="home" class="page active">
+            <div class="card">
+                <div class="profile-header">
+                    <div class="avatar">
+                        <img src="https://files.catbox.moe/iy4nw4.png" alt="Profile">
+                    </div>
+                    <div class="user-info">
+                        <h3>REY- Crasher</h3>
+                        <p>ROLE: OWNER</p>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-val">1</div>
+                        <div class="stat-label">Online Users</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val">0</div>
+                        <div class="stat-label">Active Senders</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">Latest News</div>
+            
+            <div class="news-banner">
+                <video autoplay muted loop playsinline>
+                    <source src="https://files.catbox.moe/ua0mbn.mp4" type="video/mp4">
+                </video>
+                <div class="news-overlay">
+                    <h4 style="font-weight: 800;">Rey Crasher</h4>
+                    <p style="font-size: 0.7rem; color: #ccc;">Contact @ReyShadow_ss3</p>
+                </div>
+            </div>
+
+            <div class="section-title">Account Statistics</div>
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>Username</span>
+                    <span style="color: #d946ef;">Rey Crasher</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Expires</span>
+                    <span>LIFETIME</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="tools" class="page">
+            <div class="section-title">MENU BUG</div>
+            
+            <div class="input-group">
+                <label>TARGET PHONE NUMBER</label>
+                <input type="tel" class="custom-input" placeholder="628xxx (WhatsApp)">
+            </div>
+
+            <div class="section-title">SELECT BUG TYPE</div>
+            <div class="exploit-grid">
+                <div class="exploit-btn" onclick="selectExploit(this)">DELAY HARD</div>
+                <div class="exploit-btn" onclick="selectExploit(this)">IOS VISIBLE</div>
+                <div class="exploit-btn" onclick="selectExploit(this)">CRASH ANDRO</div>
+                <div class="exploit-btn" onclick="selectExploit(this)">IOS INVISIBLE</div>
+            </div>
+
+            <button class="action-btn" onclick="executeAttack()">
+                EXECUTE SHADOW ATTACK
+            </button>
+            
+            <br><br>
+            <div class="section-title">NEW TOOLS</div>
+            
+            <div class="tool-list">
+                <div class="tool-item" onclick="openToolModal('Spam OTP')">
+                    <div class="tool-icon"><i class="fa-solid fa-key"></i></div>
+                    <div class="tool-info">
+                        <h4>Spam OTP</h4>
+                        <p>OTP Request</p>
+                    </div>
+                    <div class="badge">ACTIVE</div>
+                </div>
+
+                <div class="tool-item" onclick="openToolModal('Spam SMS')">
+                    <div class="tool-icon"><i class="fa-solid fa-comment-sms"></i></div>
+                    <div class="tool-info">
+                        <h4>Spam SMS</h4>
+                        <p>SMS </p>
+                    </div>
+                    <div class="badge">ONLINE</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="bancheck" class="page">
+            <div class="card" style="text-align: center; margin-top: 50px;">
+                <i class="fa-solid fa-ban" style="font-size: 3rem; color: #facc15; margin-bottom: 20px;"></i>
+                <h3>BAN CHECKER</h3>
+                <p style="color: #888;">System Under Maintenance</p>
+            </div>
+        </div>
+
+        <div id="profile" class="page">
+            <div class="profile-big">
+                <div class="avatar-lg">
+                    <img src="https://files.catbox.moe/iy4nw4.png" alt="Profile">
+                    <div class="edit-badge"><i class="fa-solid fa-pen"></i></div>
+                </div>
+                <input type="text" class="editable-name" value="Tokatsu" onchange="saveProfile(this.value)">
+                <p style="color: #d946ef; font-weight: bold; margin-top: 5px;">OWNER</p>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 10px;">
+                    <span><i class="fa-solid fa-coins" style="color: gold; margin-right: 10px;"></i> Coin</span>
+                    <span>9999</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span><i class="fa-solid fa-globe" style="color: skyblue; margin-right: 10px;"></i> Language</span>
+                    <span>ID / EN</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="navTo('home', this)">
+                <i class="fa-solid fa-house"></i>
+                <span>Home</span>
+            </div>
+            <div class="nav-item" onclick="navTo('tools', this)">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+                <span>Tools</span>
+            </div>
+            <div class="nav-item" onclick="navTo('bancheck', this)">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Ban Check</span>
+            </div>
+            <div class="nav-item" onclick="navTo('profile', this)">
+                <i class="fa-solid fa-user"></i>
+                <span>Profile</span>
+            </div>
+        </nav>
+
+    </div>
+
+    <div class="modal-overlay" id="loadingModal">
+        <div class="modal-content">
+            <div class="loader"></div>
+            <h3 id="modalTitle" style="margin-bottom: 10px;">EXECUTING...</h3>
+            <div class="console-text" id="consoleLog"></div>
+        </div>
+    </div>
+
+    <script>
+        /* --- 1. FULLSCREEN ENFORCER (LOGIKA AGRESIF) --- */
+        function forceFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(() => {
+                    // Silent fail is expected on load without interaction
+                });
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen();
+            }
+        }
+
+        // Coba saat load
+        window.addEventListener('load', () => {
+            forceFullscreen();
+            loadProfile();
+        });
+
+        // Trigger pada sentuhan PERTAMA user dimanapun (workaround browser policy)
+        document.addEventListener('click', () => {
+            forceFullscreen();
+        }, { once: false }); // Terus paksa setiap klik
+
+        document.addEventListener('touchstart', () => {
+            forceFullscreen();
+        }, { once: false });
+
+        /* --- 2. SPA NAVIGATION --- */
+        function navTo(pageId, navEl) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            // Show target page
+            document.getElementById(pageId).classList.add('active');
+            
+            // Update nav active state
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            navEl.classList.add('active');
+        }
+
+        /* --- 3. TOOLS LOGIC --- */
+        function selectExploit(btn) {
+            // Hapus seleksi sebelumnya
+            document.querySelectorAll('.exploit-btn').forEach(b => b.classList.remove('selected'));
+            // Tambah seleksi baru
+            btn.classList.add('selected');
+        }
+
+        function executeAttack() {
+            const input = document.querySelector('.custom-input').value;
+            const selected = document.querySelector('.exploit-btn.selected');
+
+            if(!input) {
+                alert("⚠️ TARGET NUMBER REQUIRED");
+                return;
+            }
+            if(!selected) {
+                alert("⚠️ SELECT EXPLOIT TYPE");
+                return;
+            }
+
+            runFakeConsole("INITIATING SHADOW ATTACK...", [
+                "Target: " + input,
+                "Exploit: " + selected.innerText,
+                "Bypassing firewall...",
+                "Injecting payload...",
+                "Packet overflow initiated...",
+                "SUCCESS: Target destabilized."
+            ]);
+        }
+
+        function openToolModal(toolName) {
+            runFakeConsole("STARTING " + toolName.toUpperCase() + "...", [
+                "Connecting to server...",
+                "Gateway: 192.168.X.X",
+                "Authenticating...",
+                "Waiting for queue...",
+                "Broadcast started...",
+                "Sent: 50/1000",
+                "Sent: 1000/1000",
+                "TASK COMPLETED"
+            ]);
+        }
+
+        function runFakeConsole(title, logs) {
+            const modal = document.getElementById('loadingModal');
+            const consoleDiv = document.getElementById('consoleLog');
+            const titleEl = document.getElementById('modalTitle');
+            
+            titleEl.innerText = title;
+            consoleDiv.innerHTML = "";
+            modal.classList.add('show');
+
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i < logs.length) {
+                    const line = document.createElement('div');
+                    line.innerText = "> " + logs[i];
+                    consoleDiv.appendChild(line);
+                    consoleDiv.scrollTop = consoleDiv.scrollHeight;
+                    i++;
+                } else {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        modal.classList.remove('show');
+                    }, 1000);
+                }
+            }, 500); // Kecepatan log
+        }
+
+        /* --- 4. PROFILE LOGIC (LOCALSTORAGE) --- */
+        function saveProfile(name) {
+            localStorage.setItem('rey_username', name);
+        }
+
+        function loadProfile() {
+            const savedName = localStorage.getItem('rey_username');
+            if(savedName) {
+                document.querySelector('.editable-name').value = savedName;
+                document.querySelector('.user-info h3').innerText = savedName + " - Crasher";
+            }
+        }
+    </script>
+</body>
+</html>
